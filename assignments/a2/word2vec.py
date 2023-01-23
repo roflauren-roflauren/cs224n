@@ -128,7 +128,7 @@ def negSamplingLossAndGradient(
         U_reformed[i] = outsideVectors[outside_idx]
         if i != 0: U_reformed[i] *= -1
 
-    # sigma(U * v_c) and sigma(U * v_c) - 1:
+    # sigmoid(U * v_c) and sigmoid(U * v_c) - 1:
     sig_Uv     = sigmoid(np.matmul(U_reformed, centerWordVec))
     sig_Uv_dec = sig_Uv - 1
 
