@@ -53,7 +53,7 @@ def train(parser, train_data, dev_data, output_path, batch_size=1024, n_epochs=1
 
 
     ### YOUR CODE HERE (~2-7 lines)
-    optimizer = optim.Adam(params=parser.model.parameters())
+    optimizer = optim.Adam(params=parser.model.parameters(), lr = lr)
     loss_func = nn.CrossEntropyLoss(reduction='mean')
     ### END YOUR CODE
 
