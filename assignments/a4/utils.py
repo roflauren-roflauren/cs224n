@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-CS224N 2021-22: Homework 4
-utils.py: Utility function
+CS224N 2022-23: Homework 4
+utils.py: Utility Functions
 Pencheng Yin <pcyin@cs.cmu.edu>
 Sahil Chopra <schopra8@stanford.edu>
 Vera Lin <veralin@stanford.edu>
+Siyan Li <siyanli@stanford.edu>
 """
 
 import math
@@ -34,7 +35,6 @@ def pad_sents(sents, pad_token):
     sents_padded = []
 
     ### YOUR CODE HERE (~6 Lines)
-
 
 
     ### END YOUR CODE
