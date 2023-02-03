@@ -1,0 +1,8 @@
+224n a4 potential issues:
+=========================
+* q1c: implementing __init__() in nmt_model.py
+	- should self.post_embed_cnn have a bias? nn.Conv1d(bias=True) by default.
+
+* q1d, q1e: implementing encode() and decode() in nmt_model.py
+	- see X, Y construction: alt formation is: alt = self.model_embeddings.source(source_padded) (sub source/target).
+	- change if needed, but present code seems operable if unnecessary.
