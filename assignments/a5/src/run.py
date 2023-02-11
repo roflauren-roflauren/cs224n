@@ -64,10 +64,15 @@ Don't change above here; write your code below
 # note: models should moved to device defined on line 34.
 
 if args.variant == 'vanilla':
-    pass # [part c] Make some model here
+    # [part c] Make some model here:
+    model = model.GPT(mconf)
+    model.to(device=device)
 elif args.variant == 'perceiver':
+    # [part g] Make some other model here:
     # set mconf.perceiver, and mconf.bottleneck_dim parameters appropriately.
-    pass # [part g] Make some other model here
+    mconf.perceiver, mconf.bottleneck_dim = True, args.bottleneck_dim    
+    model = model.GPT(mconf)
+    model.to(device=device)
 else:
     raise ValueError("Unknown model variant")
 
@@ -92,7 +97,20 @@ if args.function == 'pretrain':
     # final_tokens=200*len(pretrain_dataset)*block_size
     # num_workers=4
     # writer=writer 
-    raise NotImplementedError
+    
+    ### MY CODE HERE:
+    # initialize trainer config using hyperparameters described for [part f] in preceeding spec. comment:
+    tconf = trainer.TrainerConfig(max_epochs=650, batch_size=128, learning_rate=args.pretrain_lr,
+                                lr_decay=True, warmup_tokens=512*20, final_tokens=200*len(pretrain_dataset)*block_size,
+                                num_workers=4, writer=writer)
+    # set up trainer:
+    trainer = trainer.Trainer(model=model, train_dataset=pretrain_dataset, test_dataset=None, config=tconf)
+    # kick off training: 
+    trainer.train()
+    # save the model: 
+    torch.save(model.state_dict(), args.writing_params_path)
+    ### END MY CODE
+
 elif args.function == 'finetune':
     assert args.writing_params_path is not None
     assert args.finetune_corpus_path is not None
@@ -129,7 +147,30 @@ elif args.function == 'finetune':
     #     You can use the args.reading_params_path flag to switch between the
     #     number of epochs for each case.
      
-    raise NotImplementedError
+    ### MY CODE HERE:
+    if args.reading_params_path is not None: # [part f]
+        # retrieve and load model params:
+        model.load_state_dict(torch.load(args.reading_params_path))
+        # initialize trainer config using hyperparameters described for [part f] in preceeding spec. comment:
+        tconf = trainer.TrainerConfig(max_epochs=10, batch_size=256, learning_rate=args.finetune_lr,
+                                      lr_decay=True, warmup_tokens=512*20, final_tokens=200*len(pretrain_dataset)*block_size,
+                                      num_workers=4, writer=writer)
+    else: # [part c]
+        # initialize trainer config using hyperparameters described for [part d] in preceeding spec. comment:
+        tconf = trainer.TrainerConfig(max_epochs=75, batch_size=256, learning_rate=args.finetune_lr,
+                                    lr_decay=True, warmup_tokens=512*20, final_tokens=200*len(pretrain_dataset)*block_size,
+                                    num_workers=4, writer=writer)
+        
+    # create finetune dataset obj: 
+    ft_data = dataset.NameDataset(pretraining_dataset=pretrain_dataset, data=open(args.finetune_corpus_path, encoding='utf-8').read())
+    # set up trainer:
+    trainer = trainer.Trainer(model=model, train_dataset=ft_data, test_dataset=None, config=tconf)
+    # kick off training: 
+    trainer.train()
+    # save the model: 
+    torch.save(model.state_dict(), args.writing_params_path)
+    ### END MY CODE
+    
 elif args.function == 'evaluate':
     assert args.outputs_path is not None
     assert args.reading_params_path is not None
@@ -154,4 +195,3 @@ elif args.function == 'evaluate':
     else:
         print('Predictions written to {}; no targets provided'
                 .format(args.outputs_path))
-

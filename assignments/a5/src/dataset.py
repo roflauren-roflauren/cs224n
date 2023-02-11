@@ -97,7 +97,7 @@ to int(self.block_size*7/8) has a chance of being picked) for full credit.
     
     [prefix] [masked_content] [suffix]
 
-  In other words, choose three strings prefix, masked_content and suffix
+  In other words, choose three strings: prefix, masked_content and suffix
     such that prefix + masked_content + suffix = [the original document].
   The length of [masked_content] should be random, and 1/4 the length of the
     truncated document on average.
@@ -167,8 +167,29 @@ class CharCorruptionDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # TODO [part e]: see spec above
-        raise NotImplementedError
+        # [part e]: see spec above
+        ### MY CODE HERE:
+        # p0:
+        document = self.data[idx]
+        # p1: 
+        min_trunc_chars, max_trunc_chars = len(document) - int(self.block_size * 7/8), len(document) - 4
+        num_trunc_chars = random.randint(min_trunc_chars, max_trunc_chars)
+        trunced_doc = document[:-num_trunc_chars]
+        # p2:
+        masked_content_len = random.randint(0, 2 * len(trunced_doc) // 4)
+        prefix_len = random.randint(0, len(trunced_doc) - masked_content_len)
+        prefix, masked_content, suffix = trunced_doc[:prefix_len], trunced_doc[prefix_len:prefix_len+masked_content_len], trunced_doc[prefix_len+masked_content_len:]
+        # p3:
+        masked_string = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content
+        num_pads = self.block_size - len(masked_string)
+        masked_string = masked_string + (self.PAD_CHAR * num_pads)
+        # p4: 
+        input, output = masked_string[:-1], masked_string[1:]
+        # p5:
+        x = torch.tensor([self.stoi[c] for c in input],  dtype=torch.long)
+        y = torch.tensor([self.stoi[c] for c in output], dtype=torch.long) 
+        return x, y
+        ### END MY CODE
 
 """
 Code under here is strictly for your debugging purposes; feel free to modify

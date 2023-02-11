@@ -89,18 +89,34 @@ class DownProjectBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
         ### YOUR CODE HERE
-        ### Hint: Copy over the code from Block and make necessary modifications.
-        pass
+        # init. parameter for basis vectors C: 
+        self.C   = torch.Tensor(size=(1, config.bottleneck_dim, config.n_embd))
+        self.C = self.C.to(torch.cuda.current_device())
+        nn.init.xavier_uniform_(self.C)
+        # set up rest of transformer block:
+        self.ln1 = nn.LayerNorm(config.n_embd)
+        self.ln2 = nn.LayerNorm(config.n_embd)
+        # need a third normalization layer since we'll be normalizing self.C:
+        self.ln3 = nn.LayerNorm(config.n_embd)
+        self.attn = attention.CausalCrossAttention(config)
+        self.mlp = nn.Sequential(
+            nn.Linear(config.n_embd, 4 * config.n_embd),
+            nn.GELU(),
+            nn.Linear(4 * config.n_embd, config.n_embd),
+            nn.Dropout(config.resid_pdrop),
+        )
         ### END YOUR CODE
+
 
     def forward(self, x_input):
         """Hint: perform cross-attention between x_input and self.C.
         Use the layernorm layers on C, and then on the input to the MLP.
         """
         ### YOUR CODE HERE
-        ### Hint: Copy over the code from Block and make necessary modifications.
-        ### Should be around 3-5 lines.
-        pass
+        C = self.C + self.attn(x_kv = self.ln1(x_input), 
+                               x_q  = self.ln3(self.C))
+        C = C + self.mlp(self.ln2(C))
+        return C
         ### END YOUR CODE
     
     
@@ -114,8 +130,17 @@ class UpProjectBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
         ### YOUR CODE HERE
-        ### Hint: Copy over the code from Block and make necessary modifications.
-        pass
+        self.ln1 = nn.LayerNorm(config.n_embd)
+        self.ln2 = nn.LayerNorm(config.n_embd)
+        # need a third normalization layer to normalize y: 
+        self.ln3 = nn.LayerNorm(config.n_embd)
+        self.attn = attention.CausalCrossAttention(config)
+        self.mlp = nn.Sequential(
+            nn.Linear(config.n_embd, 4 * config.n_embd),
+            nn.GELU(),
+            nn.Linear(4 * config.n_embd, config.n_embd),
+            nn.Dropout(config.resid_pdrop),
+        )
         ### END YOUR CODE
     
     def forward(self, y, x_input):
@@ -124,9 +149,11 @@ class UpProjectBlock(nn.Module):
         Use the layernorm layers on y, and then on the input to the MLP.
         """
         ### YOUR CODE HERE
-        ### Hint: Copy over the code from Block and make necessary modifications.
-        ### Should be around 3-5 lines.
-        pass
+        x_input = x_input + self.attn(x_kv = self.ln3(y), 
+                                      x_q  = self.ln1(x_input), 
+                                      )
+        x_input = x_input + self.mlp(self.ln2(x_input))
+        return x_input
         ### END YOUR CODE
     
 
@@ -136,6 +163,9 @@ class GPT(nn.Module):
     def __init__(self, config):
         super().__init__()
 
+        # TODO: DELETE BEFORE SUBMISSION
+        self.device = torch.cuda.current_device()
+        
         # input embedding stem
         self.tok_emb = nn.Embedding(config.vocab_size, config.n_embd)
         self.pos_emb = nn.Parameter(torch.zeros(1, config.block_size, config.n_embd))
@@ -155,8 +185,6 @@ class GPT(nn.Module):
             # reset value of the block size back to the original.
             config.block_size = input_block_size
             self.up_block = UpProjectBlock(config)
-            
-            
         else:
             self.blocks = nn.Sequential(*[Block(config) for _ in range(config.n_layer)])
         # decoder head
